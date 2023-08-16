@@ -13,7 +13,7 @@ enum Instruction {
 #undef X
 
 // Generate the mapping function
-const char *get_opcode_name(int value) {
+const char *get_opcode_name(uint8_t value) {
     switch (value) {
 #define X(name, args, value, gas) case value: return #name;
         OPCODES
@@ -50,20 +50,31 @@ static uint64_t simpleInstruction(const char *instruction, uint64_t offset);
 int main(int argc, const char *argv[]){
 
    // unsigned char *input ="6080604052"; //"006004600361";
-    unsigned char *input = "60806040526001600055348015601457600080fd5b5060358060226000396000f3fe6080604052600080fdfea165627a7a723058204e048d6cab20eb0d9f95671510277b55a61a582250e04db7f6587a1bebc134d20029";
+    if (argc < 2){
+        printf("usage  %s <bytecode>\n", argv[0]);
+        return 0;
+    }
+
+    const unsigned char *input =  argv[1];
     uint64_t pc = 0;
 
     unsigned char *converted = NULL;
 
     size_t no_bytes = hexStringToBytes(input, &converted);
-
+    uint8_t section = 0;
+    printf("===== SECTION %d \t\t\n", section);
     while(pc < no_bytes){
         uint8_t opcode = converted[pc];
 
-        if (opcode ==  INVALID){
-            break;
+
+        printf("%04ld: 0x%02X\t\t", pc, converted[pc]);
+
+          if (opcode ==  INVALID){
+
+            section ++;
+
+            printf("\n===== SECTION  %d \t\t\n", section);
         }
-        //printf("%04ld: 0x%02X\t\t", pc, converted[pc]);
 
         pc  = processInstruction(converted, pc);
 
@@ -71,29 +82,33 @@ int main(int argc, const char *argv[]){
 
     return 0;
 }
-
 uint64_t processInstruction(char *bytecode, uint64_t offset){
    uint8_t instruction =  *(bytecode + offset);
    char *instruction_name = strdup(get_opcode_name(instruction));
+if (strcmp(instruction_name,  "unknown") == 0){
+       printf("%04ld: 0x%02x\n", offset, instruction);
+       return offset + 1;
+   }
 
    printf("%04ld: %s\t\t", offset, instruction_name);
    //printf("%4ld \t %s\n", offset, instruction_name);
 
    if (instruction >= PUSH1 && instruction <= PUSH32){
        uint64_t arguments = ((uint8_t)instruction - 95);
-
+       printf("0x");
        for (int i = 0; i < arguments; i++){
-           printf("0x%02x\n", bytecode[offset + i + 1]);
+           printf("%02x", bytecode[offset + i + 1] & 0xFF);
        }
-
+       printf("\n");
        return offset + 1 + arguments;
    }
    else{
-       printf("0x%02x\n", bytecode[offset] );
+
+       printf("\n");
+       //printf("0x%02x\n", bytecode[offset] );
        return offset + 1;
    }
 }
-
 static uint64_t simpleInstruction(const char *label, uint64_t offset){
     printf("%s\n", label);
     return offset + 1;
